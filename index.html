@@ -1,0 +1,839 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ヒロイン・チャンピオン</title>
+<style>
+:root{--bg:#1d1b2e;--panel:#2a2742;--panel2:#363256;--line:#4c4775;--text:#f3f0ff;--sub:#b7b0d8;--accent:#ff7ab6;--accent2:#7ad7ff;--good:#5fd38a;--warn:#f2c230;--bad:#ef5b5b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Hiragino Kaku Gothic ProN","Noto Sans JP",Meiryo,sans-serif;line-height:1.5}
+#app{max-width:760px;margin:0 auto;padding:12px 16px 40px}
+button{font:inherit;color:inherit;background:var(--panel2);border:2px solid var(--line);border-radius:10px;padding:8px 14px;cursor:pointer;touch-action:manipulation}
+button:hover:not(:disabled){border-color:var(--accent)}
+button:disabled{opacity:.4;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);color:#2a0b1c;font-weight:bold}
+.hidden{display:none!important}
+.panel{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sub{color:var(--sub);font-size:13px}
+h1,h2,h3{margin:.2em 0 .4em}
+#hud{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+#hud .info{font-size:14px}
+#hud .row button{padding:5px 10px;font-size:13px}
+.badge{display:inline-block;width:16px;height:16px;border-radius:50%;margin-left:2px;vertical-align:middle;border:2px solid #fff3}
+.type{display:inline-block;padding:0 7px;border-radius:8px;font-size:12px;color:#1a1a1a;font-weight:bold}
+.hpbar{height:9px;background:#0005;border-radius:5px;overflow:hidden;min-width:80px}
+.hpbar>div{height:100%;transition:width .35s}
+.expbar{height:4px;background:#0005;border-radius:3px;overflow:hidden;margin-top:2px}
+.expbar>div{height:100%;background:var(--accent2)}
+/* title */
+.title{text-align:center;padding:30px 10px}
+.title h1{font-size:40px;letter-spacing:2px;background:linear-gradient(90deg,#ff7ab6,#ffd27a,#7ad7ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.title .portraits{display:flex;justify-content:center;gap:4px;margin:18px 0}
+/* world */
+.node{display:flex;align-items:center;gap:12px;width:100%;text-align:left;margin-bottom:8px}
+.node .ico{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:bold;flex:none}
+.node.locked{opacity:.45}
+/* battle */
+.battle{display:flex;flex-direction:column;gap:8px}
+.field{position:relative;border-radius:14px;padding:12px;min-height:250px;background:linear-gradient(#3b5d8a,#6d8fb5 55%,#5b8a4e 55%,#4a7a40)}
+.field.cave{background:linear-gradient(#2c2433,#4a3d52 55%,#5a4a3e 55%,#45392f)}
+.field.tower{background:linear-gradient(#8fb8d8,#cfe6f5 55%,#a9c9de 55%,#8fb2c9)}
+.field.gym{background:linear-gradient(#4a2d5a,#7a4d8a 55%,#b88a5a 55%,#9a7048)}
+.combatant{display:flex;align-items:flex-end;gap:10px}
+.combatant.enemy{justify-content:flex-end;flex-direction:row}
+.combatant.player{margin-top:6px}
+.combatant .card{background:#1d1b2ee6;border-radius:10px;padding:6px 10px;min-width:180px;font-size:14px}
+.pt{transition:transform .15s,filter .15s}
+.pt.hit{animation:hit .35s}
+.pt.faint{opacity:.15;transform:translateY(20px)}
+@keyframes hit{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px);filter:brightness(2)}75%{transform:translateX(8px);filter:brightness(2)}}
+.dots span{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:2px;background:var(--good)}
+.dots span.off{background:#666}
+.log{background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:8px 12px;height:96px;overflow-y:auto;font-size:15px;cursor:pointer}
+.log div{margin:1px 0}
+.cmd{display:grid;grid-template-columns:1fr 1fr;gap:8px;min-height:92px}
+.cmd button{padding:10px 8px}
+.cmd .wide{grid-column:1/3}
+.mv{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left}
+.mv small{color:var(--sub);font-size:11px}
+/* explore */
+#cv{width:100%;height:auto;border-radius:12px;border:2px solid var(--line);display:block;image-rendering:pixelated;background:#000}
+.dpad{display:grid;grid-template-columns:repeat(3,56px);grid-template-rows:repeat(3,48px);gap:4px;justify-content:center}
+.dpad button{padding:0;font-size:20px}
+/* modal */
+#modal{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;z-index:10;padding:16px}
+#modal .box{background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:16px;max-width:640px;width:100%;max-height:88vh;overflow-y:auto}
+.talk{display:flex;gap:12px;align-items:center;cursor:pointer;min-height:90px}
+.talk .who{font-weight:bold;color:var(--accent)}
+.talk .next{text-align:right;color:var(--sub);font-size:12px}
+.fcard{display:flex;gap:10px;align-items:center;background:var(--panel2);border-radius:12px;padding:8px;margin-bottom:8px}
+.fcard .body{flex:1;min-width:0}
+.fcard .acts{display:flex;flex-direction:column;gap:4px}
+.fcard .acts button{padding:4px 8px;font-size:12px}
+.fcard.sel{outline:2px solid var(--accent)}
+.dex{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+.dex .cell{background:var(--panel2);border-radius:12px;padding:6px;text-align:center;font-size:12px}
+.shopitem{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px;background:var(--panel2);border-radius:10px;margin-bottom:6px}
+@media (max-width:520px){.title h1{font-size:30px}.combatant .card{min-width:140px}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud" class="hidden"></div>
+  <div id="screen"></div>
+</div>
+<div id="modal" class="hidden"><div class="box" id="mbox"></div></div>
+
+<script>
+'use strict';
+/* ================== 基本データ ================== */
+const TYPES=['無','炎','水','草','雷','氷','拳','魔','闇','光'];
+const TC={無:'#c9bba9',炎:'#f58a4e',水:'#5a9cf0',草:'#6cc86a',雷:'#f2cf40',氷:'#8fe0f0',拳:'#e06a5d',魔:'#c47ae0',闇:'#8f7aa8',光:'#f7e48a'};
+const EFF={炎:{草:2,氷:2,水:.5,炎:.5},水:{炎:2,草:.5,水:.5},草:{水:2,炎:.5,草:.5},雷:{水:2,草:.5,雷:.5},
+  氷:{草:2,炎:.5,氷:.5},拳:{無:2,氷:2,闇:2,魔:.5},魔:{拳:2,闇:.5,魔:.5},闇:{魔:2,光:.5},光:{闇:2,光:.5}};
+const eff=(a,d)=>(EFF[a]&&EFF[a][d])||1;
+
+const MOVES={
+  tackle:{n:'たいあたり',t:'無',p:40,a:100},
+  quick:{n:'でんこうせっか',t:'無',p:40,a:100,pri:1},
+  slam:{n:'のしかかり',t:'無',p:80,a:95},
+  hyper:{n:'ひっさつのいちげき',t:'無',p:115,a:85},
+  growl:{n:'にらみつける',t:'無',k:'debuff',stat:'def',a:100},
+  focus:{n:'きあいだめ',t:'無',k:'buff',stat:'atk'},
+  guard:{n:'てっぺき',t:'無',k:'buff',stat:'def'},
+  heal:{n:'いやしのうた',t:'光',k:'heal'},
+  ember:{n:'ひのこ',t:'炎',p:40,a:100},flame:{n:'かえんだん',t:'炎',p:75,a:95},inferno:{n:'しゃくねつのほのお',t:'炎',p:110,a:85},
+  water:{n:'みずでっぽう',t:'水',p:40,a:100},aqua:{n:'アクアショット',t:'水',p:75,a:95},flood:{n:'だいこうずい',t:'水',p:110,a:85},
+  leaf:{n:'はっぱカッター',t:'草',p:40,a:100},drain:{n:'ギガドレイン',t:'草',p:60,a:100,drain:true},vine:{n:'いばらのムチ',t:'草',p:75,a:95},bloom:{n:'しんりょくのあらし',t:'草',p:110,a:85},
+  shock:{n:'でんきショック',t:'雷',p:40,a:100},bolt:{n:'いなずまキック',t:'雷',p:75,a:95},thunder:{n:'らいめい',t:'雷',p:115,a:80},
+  ice:{n:'こおりのつぶて',t:'氷',p:40,a:100,pri:1},icicle:{n:'つららおとし',t:'氷',p:75,a:95},blizzard:{n:'ブリザード',t:'氷',p:110,a:85},
+  jab:{n:'ジャブ',t:'拳',p:40,a:100},kick:{n:'まわしげり',t:'拳',p:75,a:95},palm:{n:'はっけい',t:'拳',p:105,a:90},
+  psy:{n:'サイコウェーブ',t:'魔',p:45,a:100},mind:{n:'マインドブラスト',t:'魔',p:80,a:95},star:{n:'スターフォール',t:'魔',p:110,a:85},
+  shade:{n:'かげうち',t:'闇',p:40,a:100,pri:1},slash:{n:'ナイトスラッシュ',t:'闇',p:75,a:95},abyss:{n:'アビスゲート',t:'闇',p:105,a:90},
+  light:{n:'ひかりのや',t:'光',p:45,a:100},holy:{n:'ホーリーレイ',t:'光',p:85,a:95},judge:{n:'セイクリッドジャッジ',t:'光',p:115,a:85},
+};
+const LEARN={
+  無:[[1,'tackle'],[1,'growl'],[6,'quick'],[12,'focus'],[20,'slam'],[32,'hyper']],
+  炎:[[1,'tackle'],[1,'ember'],[5,'growl'],[11,'focus'],[17,'flame'],[26,'slam'],[36,'inferno']],
+  水:[[1,'tackle'],[1,'water'],[5,'growl'],[11,'guard'],[17,'aqua'],[26,'heal'],[36,'flood']],
+  草:[[1,'tackle'],[1,'leaf'],[5,'growl'],[11,'drain'],[17,'vine'],[26,'heal'],[36,'bloom']],
+  雷:[[1,'quick'],[1,'shock'],[8,'growl'],[15,'focus'],[20,'bolt'],[34,'thunder']],
+  氷:[[1,'tackle'],[1,'ice'],[8,'guard'],[18,'icicle'],[28,'heal'],[36,'blizzard']],
+  拳:[[1,'jab'],[1,'focus'],[9,'quick'],[17,'kick'],[25,'guard'],[33,'palm']],
+  魔:[[1,'tackle'],[1,'psy'],[10,'heal'],[18,'mind'],[24,'growl'],[35,'star']],
+  闇:[[1,'shade'],[1,'growl'],[10,'focus'],[20,'slash'],[28,'quick'],[37,'abyss']],
+  光:[[1,'tackle'],[1,'light'],[8,'heal'],[20,'holy'],[28,'guard'],[38,'judge']],
+};
+// b:[HP,攻撃,防御,素早さ] ev:[進化先,Lv] style:0ボブ 1ロング 2ツイン 3ポニー
+const SPECIES=[
+ {n:'ヒカリ',ti:'見習い炎術士',t:'炎',b:[45,52,43,60],ev:[1,16],hair:'#e8553a',style:3,acc:'ribbon',out:'#d9443a',c:.45,x:60,extra:[[22,'kick']],d:'炎の魔法を修行中の元気な少女。負けず嫌い。'},
+ {n:'ホムラ',ti:'炎術士',t:'炎',b:[58,66,58,80],ev:[2,34],hair:'#e8553a',style:3,acc:'hat',out:'#b8322a',c:.3,x:140,extra:[[22,'kick']],d:'炎を自在に操る術士。情熱的な性格。'},
+ {n:'カグヤ',ti:'紅蓮の魔女',t:'炎',b:[78,86,76,100],hair:'#d9302a',style:1,acc:'crown',out:'#8a1a2a',c:.15,x:230,extra:[[22,'kick']],d:'紅蓮の炎をまとう大魔女。その炎は夜空を焦がす。'},
+ {n:'シズク',ti:'水の巫女見習い',t:'水',b:[50,48,62,43],ev:[4,16],hair:'#3b6fd1',style:1,acc:'flower',out:'#e8eef8',c:.45,x:60,extra:[[22,'ice']],d:'泉の神殿で修行する見習い巫女。おっとり屋さん。'},
+ {n:'ミナモ',ti:'水の巫女',t:'水',b:[60,63,78,58],ev:[5,34],hair:'#2f5fc0',style:1,acc:'flower',out:'#d8e4f8',c:.3,x:140,extra:[[24,'icicle']],d:'水面のように静かな心を持つ巫女。'},
+ {n:'ワダツミ',ti:'海神の巫女',t:'水',b:[82,82,100,76],hair:'#1f4aa8',style:1,acc:'crown',out:'#2a5ab8',c:.15,x:230,extra:[[24,'icicle']],d:'海神の加護を受けた大巫女。荒波をも鎮める。'},
+ {n:'ワカバ',ti:'森の弓使い見習い',t:'草',b:[48,50,50,55],ev:[7,16],hair:'#7a5a3a',style:2,acc:'flower',out:'#5aa84a',c:.45,x:60,extra:[[21,'quick']],d:'森で育った弓使いの卵。動物と話せるらしい。'},
+ {n:'コノハ',ti:'森の弓使い',t:'草',b:[62,66,63,70],ev:[8,34],hair:'#6a4a2a',style:2,acc:'band',out:'#3f8a3a',c:.3,x:140,extra:[[21,'quick']],d:'木の葉一枚をも射抜く腕前の弓使い。'},
+ {n:'ユグドラ',ti:'世界樹の射手',t:'草',b:[82,84,82,93],hair:'#4a3a1a',style:1,acc:'crown',out:'#2a6a2a',c:.15,x:230,extra:[[21,'quick']],d:'世界樹に選ばれた伝説の射手。'},
+ {n:'モモ',ti:'町娘',t:'無',b:[50,45,40,55],ev:[10,18],hair:'#f4a6c0',style:0,acc:'ribbon',out:'#f7c8d8',c:.8,x:45,d:'どこにでもいる明るい町娘。実は力持ち。'},
+ {n:'モモカ',ti:'看板娘',t:'無',b:[75,72,62,80],hair:'#f08ab0',style:3,acc:'ribbon',out:'#e86a9a',c:.45,x:130,d:'町一番の看板娘。笑顔と腕っぷしで店を守る。'},
+ {n:'リン',ti:'見習い格闘家',t:'拳',b:[55,62,40,50],ev:[12,24],hair:'#2a2a2a',style:3,acc:'band',out:'#f0f0f0',c:.6,x:55,extra:[[14,'shade']],d:'道場で修行中の少女。朝稽古は欠かさない。'},
+ {n:'ケンシン',ti:'拳聖',t:'拳',b:[80,105,65,75],hair:'#1a1a1a',style:3,acc:'band',out:'#c0302a',c:.3,x:170,extra:[[14,'shade']],d:'拳ひとつで岩をも砕く武の達人。'},
+ {n:'ライカ',ti:'雷拳士',t:'雷',b:[40,55,40,80],ev:[14,24],hair:'#f2d03b',style:2,acc:'band',out:'#3a3a5a',c:.55,x:58,extra:[[17,'kick']],d:'雷をまとった拳で戦う、せっかちな少女。'},
+ {n:'イナズマ',ti:'迅雷の闘姫',t:'雷',b:[60,88,60,110],hair:'#f2c020',style:2,acc:'crown',out:'#2a2a4a',c:.3,x:170,extra:[[17,'kick']],d:'稲妻よりも速いと噂される闘姫。'},
+ {n:'ユキ',ti:'雪娘',t:'氷',b:[50,45,55,50],ev:[16,26],hair:'#e8f4ff',style:1,acc:'hood',out:'#bfe4f5',c:.5,x:58,extra:[[14,'psy']],d:'雪国生まれの物静かな少女。寒さに強い。'},
+ {n:'フブキ',ti:'吹雪の姫',t:'氷',b:[75,82,80,75],hair:'#d8ecff',style:1,acc:'crown',out:'#8ac8e8',c:.3,x:170,extra:[[14,'psy']],d:'吹雪を呼ぶ雪国の姫君。'},
+ {n:'ルナ',ti:'見習い占い師',t:'魔',b:[45,42,45,60],ev:[18,28],hair:'#9b6bd1',style:1,acc:'hat',out:'#5a3a8a',c:.5,x:60,extra:[[22,'shade']],d:'星を読む見習い占い師。よく当たる。'},
+ {n:'セレネ',ti:'月の魔導師',t:'魔',b:[70,98,70,95],hair:'#8a5ac8',style:1,acc:'hat',out:'#3a2a6a',c:.25,x:175,extra:[[22,'shade']],d:'月の魔力を操る魔導師。'},
+ {n:'クロエ',ti:'影の盗賊',t:'闇',b:[48,58,42,68],ev:[20,30],hair:'#3a3050',style:0,acc:'hood',out:'#2a2440',c:.5,x:62,extra:[[16,'quick']],d:'影に紛れる盗賊。悪人からしか盗まない。'},
+ {n:'ノクス',ti:'宵闇の暗殺者',t:'闇',b:[70,98,65,108],hair:'#2a2040',style:3,acc:'hood',out:'#1a1630',c:.25,x:180,extra:[[16,'quick']],d:'宵闇を駆ける凄腕の暗殺者。義理堅い。'},
+ {n:'アリア',ti:'聖歌隊の少女',t:'光',b:[55,45,55,45],ev:[22,32],hair:'#f7e08a',style:1,acc:'ribbon',out:'#ffffff',c:.5,x:62,extra:[[15,'water']],d:'聖歌隊で歌う少女。その歌声は傷を癒す。'},
+ {n:'セラフィナ',ti:'天使の歌姫',t:'光',b:[88,85,88,82],hair:'#ffe9a0',style:1,acc:'halo',out:'#fff8e0',c:.2,x:190,extra:[[15,'water']],d:'天使と称えられる歌姫。'},
+ {n:'ドリアード',ti:'森の主',t:'草',b:[95,85,92,70],hair:'#3a8a3a',style:1,acc:'flower',out:'#2a5a2a',c:.12,x:220,boss:true,d:'迷いの森を守る主。森に認められた者にだけ心を開く。'},
+ {n:'ヴォルト',ti:'雷神の娘',t:'雷',b:[85,108,80,112],hair:'#ffe040',style:2,acc:'crown',out:'#4a3a8a',c:.1,x:260,boss:true,extra:[[1,'kick']],d:'雷鳴の洞窟に棲む雷神の娘。強者を求めている。'},
+ {n:'スノウクイーン',ti:'氷の女王',t:'氷',b:[100,100,108,85],hair:'#f0f8ff',style:1,acc:'crown',out:'#6aa8d8',c:.08,x:300,boss:true,extra:[[1,'mind']],d:'氷結の塔の頂に君臨する女王。'},
+ {n:'ティアラ',ti:'伝説の聖女',t:'光',b:[110,120,110,110],hair:'#fff0c0',style:1,acc:'halo',out:'#f0e0ff',c:.06,x:350,boss:true,extra:[[1,'star'],[1,'flood']],d:'千年に一度現れるという伝説の聖女。'},
+];
+const ITEMS={
+  potion:{n:'回復薬',d:'HPを40回復',price:100,heal:40,need:0},
+  card:{n:'スカウトカード',d:'野生のヒロインを仲間に誘う',price:150,scout:1,need:0},
+  superp:{n:'上回復薬',d:'HPを120回復',price:350,heal:120,need:1},
+  gcard:{n:'ゴールドカード',d:'誘いやすさ1.8倍',price:500,scout:1.8,need:1},
+  revive:{n:'気つけ薬',d:'戦闘不能からHP半分で復活',price:600,revive:true,need:2},
+  fullp:{n:'全快薬',d:'HPを全回復',price:900,heal:9999,need:3},
+};
+const STARTERS=[0,3,6];
+
+/* ================== エリア ================== */
+const AREAS=[
+ {id:'start',name:'はじまりの町',kind:'town',desc:'アカネ博士の研究所がある、のどかな町。',lab:true,un:()=>true},
+ {id:'r1',name:'1番道路',kind:'route',theme:'grass',floors:1,lv:[3,6],trainers:3,wild:[[9,45],[11,25],[13,15],[21,15]],un:()=>true},
+ {id:'t2',name:'若葉の町',kind:'town',gym:0,desc:'木々に囲まれた緑豊かな町。草のジムがある。',un:()=>F('r1')},
+ {id:'d1',name:'迷いの森',kind:'dungeon',theme:'forest',floors:3,lv:[8,13],trainers:2,wild:[[9,20],[17,22],[19,18],[6,12],[3,12],[0,12],[21,4]],boss:[23,16],un:()=>S.badges>=1},
+ {id:'t3',name:'港町マリーナ',kind:'town',gym:1,desc:'潮風が香る港町。水のジムがある。',un:()=>F('d1')},
+ {id:'r2',name:'潮風の道',kind:'route',theme:'beach',floors:2,lv:[15,20],trainers:3,wild:[[3,20],[11,20],[13,20],[9,15],[21,15],[17,10]],un:()=>S.badges>=2},
+ {id:'d2',name:'雷鳴の洞窟',kind:'dungeon',theme:'cave',floors:4,lv:[19,25],trainers:2,wild:[[13,30],[11,22],[19,22],[14,8],[12,8],[20,10]],boss:[24,29],un:()=>F('r2')},
+ {id:'t4',name:'雷の町ボルテア',kind:'town',gym:2,desc:'発電塔がそびえる活気ある町。雷のジムがある。',un:()=>F('d2')},
+ {id:'d3',name:'氷結の塔',kind:'dungeon',theme:'tower',floors:4,lv:[27,33],trainers:2,wild:[[15,30],[16,12],[17,22],[18,10],[21,18],[22,8]],boss:[25,37],un:()=>S.badges>=3},
+ {id:'t5',name:'雪の都フロスト',kind:'town',gym:3,desc:'一年中雪が降る美しい都。氷のジムがある。',un:()=>F('d3')},
+ {id:'d4',name:'チャンピオンロード',kind:'dungeon',theme:'road',floors:5,lv:[36,42],trainers:3,wild:[[12,10],[14,10],[16,10],[18,10],[20,10],[22,10],[1,8],[4,8],[7,8],[10,10]],boss:[26,46],un:()=>S.badges>=4},
+ {id:'league',name:'セントラルリーグ',kind:'league',desc:'選ばれし者だけが挑める、頂点の舞台。',un:()=>F('d4')},
+];
+const THEME={
+  grass:{floor:'#a8d878',grass:'#4f9a3a',wall:'#2e6b2e',field:''},
+  forest:{floor:'#7aa85a',grass:'#3a7a2e',wall:'#1a4a1e',field:''},
+  beach:{floor:'#efe0a8',grass:'#7ac06a',wall:'#3a7ac0',field:''},
+  cave:{floor:'#8a7a6a',grass:'#8a7a6a',wall:'#3a2e26',field:'cave'},
+  tower:{floor:'#d8eef8',grass:'#d8eef8',wall:'#5a7a98',field:'tower'},
+  road:{floor:'#c8b88a',grass:'#c8b88a',wall:'#5a4a3a',field:'cave'},
+};
+const GYMS=[
+ {name:'若葉ジム',leader:'ミドリ',type:'草',badge:'リーフバッジ',color:'#6cc86a',
+  trainers:[{name:'ジムトレーナー サナエ',team:[[6,8],[9,8]]},{name:'ジムトレーナー カエデ',team:[[6,9],[21,9]]}],
+  team:[[6,10],[9,10],[7,13]],intro:'ようこそ若葉ジムへ! 森のように粘り強い私の草タイプ、突破できるかしら?',win:'見事ね…! あなたとヒロインたちの絆、本物だわ。リーフバッジを受け取って!'},
+ {name:'マリーナジム',leader:'マリン',type:'水',badge:'アクアバッジ',color:'#5a9cf0',
+  trainers:[{name:'ジムトレーナー ナギサ',team:[[3,15],[9,16]]},{name:'ジムトレーナー ウミ',team:[[4,17],[21,15]]}],
+  team:[[3,17],[11,17],[4,20]],intro:'波のように押し寄せる攻撃、受けきれるかな?',win:'うーん、完敗! 潮の流れはあなたに味方してるね。アクアバッジをどうぞ!'},
+ {name:'ボルテアジム',leader:'ライデン',type:'雷',badge:'サンダーバッジ',color:'#f2cf40',
+  trainers:[{name:'ジムトレーナー ヒビキ',team:[[13,24],[11,24]]},{name:'ジムトレーナー カミナ',team:[[14,25],[19,24]]}],
+  team:[[13,26],[12,27],[14,30]],intro:'ビリビリいくぞ! 痺れるバトルを見せてくれ!',win:'ははっ、最高に痺れたよ! サンダーバッジは君のものだ!'},
+ {name:'フロストジム',leader:'ヒョウカ',type:'氷',badge:'グレイシャバッジ',color:'#8fe0f0',
+  trainers:[{name:'ジムトレーナー シラユキ',team:[[16,32],[17,31]]},{name:'ジムトレーナー コオリ',team:[[15,30],[16,33]]}],
+  team:[[16,34],[18,35],[22,35],[16,38]],intro:'凍てつく覚悟はできていて? 私のヒロインたちは手強いわよ。',win:'…溶かされてしまったわね。グレイシャバッジ、あなたに託します。'},
+];
+const LEAGUE=[
+ {name:'四天王 ゴウ',team:[[12,41],[10,41],[11,40],[12,43]],intro:'セントラルリーグへようこそ。まずは拳で語り合おう!',win:'見事な拳だった。先へ進め!'},
+ {name:'四天王 ヨミ',team:[[20,42],[18,43],[19,41],[20,44]],intro:'闇は全てを飲み込む… あなたも例外ではないわ。',win:'光が闇を超えた… 行きなさい。'},
+ {name:'四天王 ソフィア',team:[[22,44],[5,44],[18,43],[22,45]],intro:'聖なる光の前で、あなたの真価を示しなさい。',win:'あなたの輝き、確かに見届けました。'},
+ {name:'四天王 カグラ',team:[[2,45],[17,44],[14,45],[2,46]],intro:'最後の四天王、カグラよ。燃え尽きるまで付き合ってもらうわ!',win:'…燃え尽きたわ。チャンピオンが待っている。'},
+ {name:'チャンピオン レイ',champ:true,team:[[2,47],[8,47],[5,47],[14,48],[16,48],[22,50]],intro:'よく来たね。僕がこの地方のチャンピオン、レイだ。君とヒロインたちの全てを見せてくれ!',win:'…素晴らしい。今日から君が新しいチャンピオンだ!'},
+];
+const TRAINER_NAMES=['見習い剣士 アオイ','旅人 タクミ','お嬢様 レイナ','武闘家 ゴロウ','魔法学生 ミオ','冒険者 ケイ','吟遊詩人 ユウ','騎士 ガレス','探検家 ソラ','双子 ミミとララ','山男 ダイチ','踊り子 マイ'];
+
+/* ================== ユーティリティ ================== */
+const $=id=>document.getElementById(id);
+const R=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const wpick=list=>{let s=list.reduce((t,x)=>t+x[1],0),r=Math.random()*s;for(const x of list){if((r-=x[1])<0)return x[0]}return list[0][0]};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const F=k=>!!(S&&S.flags[k]);
+const sp=f=>SPECIES[f.sp];
+const nm=f=>SPECIES[f.sp].n;
+const typeTag=t=>`<span class="type" style="background:${TC[t]}">${t}</span>`;
+
+/* ================== ヒロイン ================== */
+const expFor=lv=>Math.floor(Math.pow(lv,3)*0.6);
+function st(f,k){const b=SPECIES[f.sp].b;if(k==='hp')return Math.floor(b[0]*2*f.lv/100+f.lv+10);return Math.floor(b[{atk:1,def:2,spd:3}[k]]*2*f.lv/100+5)}
+function learnset(s){const x=SPECIES[s];return [...LEARN[x.t],...(x.extra||[])].sort((a,b)=>a[0]-b[0])}
+function initMoves(s,lv){const ids=[];for(const [l,m] of learnset(s))if(l<=lv&&!ids.includes(m))ids.push(m);return ids.slice(-4)}
+function mk(s,lv,evo=true){
+  if(evo)while(SPECIES[s].ev&&lv>=SPECIES[s].ev[1])s=SPECIES[s].ev[0];
+  const f={uid:S?S.uid++:0,sp:s,lv,exp:expFor(lv),moves:initMoves(s,lv)};f.hp=st(f,'hp');return f;
+}
+function hpColor(r){return r>.5?'var(--good)':r>.2?'var(--warn)':'var(--bad)'}
+function hpBar(f){const mx=st(f,'hp'),r=f.hp/mx;return `<div class="hpbar"><div style="width:${r*100}%;background:${hpColor(r)}"></div></div>`}
+function expBar(f){const a=expFor(f.lv),b=expFor(f.lv+1),r=f.lv>=100?1:(f.exp-a)/(b-a);return `<div class="expbar"><div style="width:${Math.max(0,Math.min(1,r))*100}%"></div></div>`}
+
+/* ポートレート(SVG) */
+function portrait(id,size=96,sil=false){
+  const s=SPECIES[id],tc=TC[s.t],hair=sil?'#111':s.hair,skin=sil?'#111':'#ffe2cc',out=sil?'#111':s.out,eye=sil?'#111':'#3a2a5a';
+  let back='',acc='';
+  if(s.style===1)back=`<path d="M26 46 Q24 88 30 92 L70 92 Q76 88 74 46 Z" fill="${hair}"/>`;
+  if(s.style===2)back=`<ellipse cx="22" cy="58" rx="8" ry="20" fill="${hair}"/><ellipse cx="78" cy="58" rx="8" ry="20" fill="${hair}"/>`;
+  if(s.style===3)back=`<path d="M64 30 Q90 34 84 70 Q80 54 66 44 Z" fill="${hair}"/>`;
+  const side=`<path d="M28 48 Q26 66 32 72 L34 48 Z M72 48 Q74 66 68 72 L66 48 Z" fill="${hair}"/>`;
+  const gold=sil?'#111':'#ffd24a';
+  switch(s.acc){
+    case'ribbon':acc=`<path d="M60 24 L72 16 L72 32 Z M60 24 L48 16 L48 32 Z" fill="${sil?'#111':'#ff5a8a'}" transform="translate(10,2)"/><circle cx="70" cy="26" r="3" fill="${sil?'#111':'#ff2a6a'}"/>`;break;
+    case'hat':acc=`<path d="M22 32 Q50 22 78 32 L56 0 Q50 -4 48 6 Z" fill="${out}"/><ellipse cx="50" cy="32" rx="34" ry="6" fill="${out}"/><rect x="34" y="24" width="32" height="4" fill="${gold}"/>`;break;
+    case'band':acc=`<rect x="28" y="33" width="44" height="5" rx="2" fill="${sil?'#111':'#e03a3a'}"/><path d="M72 35 L84 30 L82 42 Z" fill="${sil?'#111':'#e03a3a'}"/>`;break;
+    case'crown':acc=`<path d="M36 26 L38 14 L44 22 L50 10 L56 22 L62 14 L64 26 Z" fill="${gold}"/><circle cx="50" cy="20" r="2.4" fill="${sil?'#111':'#ff4a6a'}"/>`;break;
+    case'halo':acc=`<ellipse cx="50" cy="12" rx="18" ry="5" fill="none" stroke="${gold}" stroke-width="3"/>`;break;
+    case'hood':acc=`<path d="M22 56 Q18 18 50 16 Q82 18 78 56 Q74 30 50 28 Q26 30 22 56 Z" fill="${out}"/>`;break;
+    case'flower':acc=`<g transform="translate(70,30)">${[0,72,144,216,288].map(a=>`<ellipse cx="0" cy="-5" rx="3.5" ry="5" fill="${sil?'#111':'#ffb0d0'}" transform="rotate(${a})"/>`).join('')}<circle r="2.6" fill="${gold}"/></g>`;break;
+  }
+  return `<svg class="pt" width="${size}" height="${size}" viewBox="0 0 100 100" aria-label="${sil?'???':s.n}">
+  <circle cx="50" cy="50" r="48" fill="${tc}" opacity="${sil?.15:.3}"/>
+  ${back}
+  <path d="M22 100 Q26 78 50 76 Q74 78 78 100 Z" fill="${out}"/>
+  <path d="M42 77 L50 88 L58 77 Z" fill="${sil?'#111':'#fff'}" opacity=".85"/>
+  <rect x="45" y="64" width="10" height="13" fill="${skin}"/>
+  <ellipse cx="50" cy="51" rx="21" ry="23" fill="${skin}"/>
+  ${sil?'':`<ellipse cx="42" cy="55" rx="3.4" ry="4.6" fill="${eye}"/><ellipse cx="58" cy="55" rx="3.4" ry="4.6" fill="${eye}"/>
+  <circle cx="43.2" cy="53.4" r="1.3" fill="#fff"/><circle cx="59.2" cy="53.4" r="1.3" fill="#fff"/>
+  <ellipse cx="37" cy="62" rx="4" ry="2" fill="#ff8aa8" opacity=".45"/><ellipse cx="63" cy="62" rx="4" ry="2" fill="#ff8aa8" opacity=".45"/>
+  <path d="M46 65 Q50 68 54 65" stroke="#a04a5a" stroke-width="1.6" fill="none" stroke-linecap="round"/>`}
+  ${side}
+  <path d="M28 50 Q27 26 50 25 Q73 26 72 50 Q68 38 60 40 Q55 31 48 40 Q40 34 28 50 Z" fill="${hair}"/>
+  ${acc}
+  </svg>`;
+}
+
+/* ================== セーブ ================== */
+let S=null;
+const SAVE_KEY='heroine_champion_save_v1';
+function save(silent){try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));if(!silent)toast('セーブしました')}catch(e){if(!silent)toast('セーブできませんでした')}}
+function load(){try{const t=localStorage.getItem(SAVE_KEY);return t?JSON.parse(t):null}catch(e){return null}}
+function toast(t){const d=document.createElement('div');d.textContent=t;d.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#000c;padding:8px 16px;border-radius:20px;z-index:20';document.body.appendChild(d);setTimeout(()=>d.remove(),1400)}
+
+/* ================== 画面/モーダル ================== */
+let SCREEN='title';
+function show(html,name,hud=true){SCREEN=name;$('screen').innerHTML=html;$('hud').classList.toggle('hidden',!hud||!S);if(hud&&S)renderHud();window.scrollTo(0,0)}
+function renderHud(){
+  const b=GYMS.map((g,i)=>`<span class="badge" title="${g.badge}" style="background:${S.badges>i?g.color:'transparent'}"></span>`).join('');
+  $('hud').innerHTML=`<div class="info"><b>${esc(S.name)}</b> ${S.champion?'👑':''} ・ ${S.money}G ・ バッジ${b}</div>
+  <div class="row"><button onclick="openParty()">パーティ</button><button onclick="openBag()">バッグ</button><button onclick="openDex()">図鑑</button><button onclick="save()">セーブ</button></div>`;
+}
+function openModal(html){$('mbox').innerHTML=html;$('modal').classList.remove('hidden')}
+function closeModal(){$('modal').classList.add('hidden');$('mbox').innerHTML='';if(S&&!$('hud').classList.contains('hidden'))renderHud();if(SCREEN==='explore')drawMap()}
+const modalOpen=()=>!$('modal').classList.contains('hidden');
+
+/* 会話: lines = [文字列 | {s:話者,t:本文,p:ポートレートID}] */
+function talk(lines){
+  return new Promise(res=>{
+    let i=0;
+    const step=()=>{
+      if(i>=lines.length){$('modal').onclick=null;closeModal();res();return}
+      let l=lines[i++];if(typeof l==='string')l={t:l};
+      openModal(`<div class="talk">${l.p!=null?portrait(l.p,80):''}<div style="flex:1">${l.s?`<div class="who">${esc(l.s)}</div>`:''}<div>${esc(l.t).replace(/\n/g,'<br>')}</div><div class="next">▼ タップで次へ</div></div></div>`);
+    };
+    $('modal').onclick=step;step();
+  });
+}
+function confirmBox(text,yes='はい',no='いいえ'){
+  return new Promise(res=>{openModal(`<p>${esc(text)}</p><div class="row"><button class="primary" id="cy">${yes}</button><button id="cn">${no}</button></div>`);
+    $('cy').onclick=()=>{closeModal();res(true)};$('cn').onclick=()=>{closeModal();res(false)}});
+}
+
+/* ================== タイトル/ニューゲーム ================== */
+function titleScreen(){
+  const has=!!load();
+  show(`<div class="title"><h1>ヒロイン・チャンピオン</h1>
+  <div class="sub">ヒロインをスカウトし、共に戦い、育て、進化させて頂点を目指せ!</div>
+  <div class="portraits">${[2,5,8,14,22].map(i=>portrait(i,72)).join('')}</div>
+  <div class="row" style="justify-content:center"><button class="primary" onclick="newGame()">はじめから</button>
+  <button onclick="continueGame()" ${has?'':'disabled'}>つづきから</button></div>
+  <p class="sub" style="margin-top:28px">操作: 矢印キー / WASD / 画面のボタン ・ 戦闘ログはタップで早送り</p></div>`,'title',false);
+}
+function continueGame(){S=load();if(!S)return;S.flags=S.flags||{};goTown(S.lastTown||'start')}
+function newGame(){
+  if(load()&&!confirm('セーブデータを上書きして始めますか?'))return;
+  show(`<div class="panel" style="max-width:420px;margin:40px auto"><h2>あなたの名前は?</h2>
+  <input id="pname" maxlength="8" value="ユウキ" style="font:inherit;padding:8px;border-radius:8px;border:2px solid var(--line);background:var(--panel2);color:var(--text);width:100%">
+  <div style="margin-top:12px"><button class="primary" onclick="startIntro()">決定</button></div></div>`,'name',false);
+  $('pname').focus();
+}
+async function startIntro(){
+  const name=($('pname').value||'ユウキ').trim().slice(0,8)||'ユウキ';
+  S={name,money:500,badges:0,party:[],box:[],bag:{potion:5,card:5},flags:{},seen:{},got:{},lastTown:'start',uid:1,champion:false,fast:false};
+  const P='アカネ博士';
+  await talk([{s:P,t:`はじめまして、${name}くん! わたしはアカネ。ヒロインの研究をしている博士よ。`},
+    {s:P,t:'この地方には、腕に覚えのある少女たち──「ヒロイン」が各地で修行しているの。'},
+    {s:P,t:'バトルで実力を示して「スカウトカード」を差し出せば、あなたを認めて仲間になってくれるわ。'},
+    {s:P,t:'仲間と一緒に4つのジムを制覇し、ダンジョンを越え、セントラルリーグのチャンピオンを目指すのよ!'},
+    {s:P,t:'さあ、最初のパートナーを選んで!'}]);
+  starterScreen();
+}
+function starterScreen(){
+  show(`<h2>最初のパートナーを選ぼう</h2><div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">${STARTERS.map(i=>{const s=SPECIES[i];return `<div class="panel" style="text-align:center">${portrait(i,110)}<h3>${s.n} ${typeTag(s.t)}</h3><div class="sub">${s.ti}</div><p style="font-size:13px">${s.d}</p><button class="primary" onclick="chooseStarter(${i})">この子にする</button></div>`}).join('')}</div>
+  <p class="sub">相性: 炎→草→水→炎 。有利なタイプで攻めるとダメージ2倍!</p>`,'starter',false);
+}
+async function chooseStarter(i){
+  const f=mk(i,5);S.party.push(f);S.got[i]=S.seen[i]=true;
+  await talk([{s:SPECIES[i].n,p:i,t:'よろしくね! 一緒に頂点を目指そう!'},{s:'アカネ博士',t:'回復薬とスカウトカードを5つずつあげるわ。まずは1番道路を抜けて若葉の町を目指しなさい!'}]);
+  save(true);goTown('start');
+}
+
+/* ================== ワールドマップ ================== */
+function worldMap(){
+  const ico={town:'町',route:'道',dungeon:'迷',league:'王'};
+  const col={town:'#5a9cf0',route:'#6cc86a',dungeon:'#c47ae0',league:'#ffd24a'};
+  const html=AREAS.map((a,i)=>{
+    const open=a.un();let st='';
+    if(a.kind==='town'&&a.gym!=null)st=S.badges>a.gym?`✓ ${GYMS[a.gym].badge}`:`${GYMS[a.gym].type}タイプのジム`;
+    if(a.kind==='route'||a.kind==='dungeon')st=(F(a.id)?'✓ 踏破 ・ ':'')+`Lv${a.lv[0]}〜${a.lv[1]}`+(a.floors>1?` ・ ${a.floors}階層`:'');
+    if(a.kind==='league')st=S.champion?'👑 殿堂入り':'四天王とチャンピオン';
+    return `<button class="node ${open?'':'locked'}" ${open?`onclick="enterArea('${a.id}')"`:'disabled'}><span class="ico" style="background:${col[a.kind]};color:#1a1a1a">${ico[a.kind]}</span><span><b>${open?a.name:'？？？'}</b><br><span class="sub">${open?st:'まだ進めない'}</span></span></button>`;
+  }).join('');
+  show(`<h2>ワールドマップ</h2>${html}`,'world');
+}
+function enterArea(id){
+  const a=AREAS.find(x=>x.id===id);
+  if(a.kind==='town')return goTown(id);
+  if(a.kind==='league')return leagueScreen();
+  startExplore(a);
+}
+
+/* ================== 町 ================== */
+function goTown(id){
+  const a=AREAS.find(x=>x.id===id);S.lastTown=id;save(true);
+  let gymBtn='';
+  if(a.gym!=null){const g=GYMS[a.gym];gymBtn=S.badges>a.gym?`<button disabled>${g.name} ✓ ${g.badge}</button>`:
+    S.badges===a.gym?`<button class="primary" onclick="challengeGym(${a.gym})">${g.name}に挑戦 (${g.type})</button>`:`<button disabled>${g.name}(前のバッジが必要)</button>`}
+  show(`<div class="panel"><h2>${a.name}</h2><p class="sub">${a.desc}</p>
+  <div class="row"><button onclick="inn()">宿屋で休む(無料)</button><button onclick="shop()">ショップ</button>${a.lab?'<button onclick="lab()">研究所</button>':''}${gymBtn}</div>
+  <div class="row" style="margin-top:12px"><button class="primary" onclick="worldMap()">町を出る(ワールドマップ)</button></div></div>
+  <div class="panel" style="margin-top:10px"><h3>パーティ</h3>${S.party.map(f=>`<div class="row" style="margin-bottom:4px">${portrait(f.sp,40)}<span style="min-width:120px">${nm(f)} Lv${f.lv}</span><span style="flex:1">${hpBar(f)}</span><span class="sub">${f.hp}/${st(f,'hp')}</span></div>`).join('')}</div>`,'town');
+}
+async function inn(){healAll();await talk([{s:'宿屋の女将',t:'ゆっくりお休み…。\nヒロインたちはすっかり元気になったよ!'}]);goTown(S.lastTown)}
+function healAll(){for(const f of [...S.party,...S.box])f.hp=st(f,'hp')}
+async function lab(){
+  const got=Object.keys(S.got).length;
+  const hint=S.badges===0?'若葉の町のジムは草タイプ。炎タイプのヒロインが有利よ!':S.badges===1?'迷いの森を抜ければ港町マリーナ。森の主は強敵だけど、仲間にできるかも?':S.badges===2?'雷タイプには草タイプが強いわ。潮風の道から雷鳴の洞窟へ向かいなさい。':S.badges===3?'氷タイプには炎と拳が有効よ。氷結の塔を登りなさい。':'チャンピオンロードの先にセントラルリーグがあるわ。頑張って!';
+  await talk([{s:'アカネ博士',t:`図鑑の進み具合は… 仲間にしたヒロイン ${got} / ${SPECIES.length} 人ね!`},{s:'アカネ博士',t:hint},{s:'アカネ博士',t:'ヒロインは一定のレベルに達すると進化するわ。控えのメンバーにも経験値が入るから、色々な子を育ててみて!'}]);
+}
+function shop(){
+  const items=Object.entries(ITEMS).filter(([k,v])=>S.badges>=v.need);
+  openModal(`<h2>ショップ <span class="sub">所持金 ${S.money}G</span></h2>${items.map(([k,v])=>`<div class="shopitem"><div><b>${v.n}</b> <span class="sub">${v.d}</span><br><span class="sub">所持 ${S.bag[k]||0}</span></div><div class="row"><span>${v.price}G</span><button onclick="buy('${k}',1)" ${S.money<v.price?'disabled':''}>1個</button><button onclick="buy('${k}',5)" ${S.money<v.price*5?'disabled':''}>5個</button></div></div>`).join('')}
+  <p class="sub">新しいバッジを手に入れると品揃えが増えます。</p><button onclick="closeModal()">閉じる</button>`);
+}
+function buy(k,n){const c=ITEMS[k].price*n;if(S.money<c)return;S.money-=c;S.bag[k]=(S.bag[k]||0)+n;shop();renderHud()}
+
+/* ================== パーティ / バッグ / 図鑑 ================== */
+let partyCtx=null; // {item} アイテム使用対象選択中
+function fcard(f,acts){
+  return `<div class="fcard">${portrait(f.sp,64)}<div class="body"><b>${nm(f)}</b> ${typeTag(sp(f).t)} <span class="sub">${sp(f).ti}</span><br>
+  Lv${f.lv} ・ HP ${f.hp}/${st(f,'hp')} ${f.hp<=0?'<b style="color:var(--bad)">戦闘不能</b>':''}${hpBar(f)}${expBar(f)}
+  <div class="sub" style="margin-top:3px">攻${st(f,'atk')} 防${st(f,'def')} 速${st(f,'spd')} ・ ${f.moves.map(m=>MOVES[m].n).join(' / ')}${sp(f).ev?` ・ Lv${sp(f).ev[1]}で進化`:''}</div></div><div class="acts">${acts}</div></div>`;
+}
+function openParty(){
+  const inBattle=SCREEN==='battle';
+  let h=`<h2>パーティ (${S.party.length}/6)</h2>`;
+  h+=S.party.map((f,i)=>fcard(f,inBattle?'':`${i>0?`<button onclick="pTop(${i})">先頭へ</button>`:''}${S.party.length>1?`<button onclick="pToBox(${i})">ボックスへ</button>`:''}`)).join('');
+  if(!inBattle){
+    h+=`<h3>ボックス (${S.box.length})</h3>`;
+    h+=S.box.length?S.box.map((f,i)=>fcard(f,`<button onclick="pFromBox(${i})" ${S.party.length>=6?'disabled':''}>連れていく</button><button onclick="release(${i})">別れる</button>`)).join(''):'<p class="sub">ボックスにはまだ誰もいません。パーティが6人の時にスカウトした子はここに来ます。</p>';
+  }
+  h+='<button onclick="closeModal()">閉じる</button>';
+  openModal(h);
+}
+function pTop(i){const [f]=S.party.splice(i,1);S.party.unshift(f);openParty()}
+function pToBox(i){if(S.party.length<=1)return;if(S.party.filter((f,j)=>j!==i&&f.hp>0).length===0){toast('元気なヒロインが残りません');return}S.box.push(S.party.splice(i,1)[0]);openParty()}
+function pFromBox(i){if(S.party.length>=6)return;S.party.push(S.box.splice(i,1)[0]);openParty()}
+async function release(i){const f=S.box[i];closeModal();if(await confirmBox(`${nm(f)}(Lv${f.lv})と別れますか? 彼女は故郷へ帰ります。`)){S.box.splice(i,1);toast(`${nm(f)}は手を振って旅立っていった`)}openParty()}
+function openBag(){
+  const list=Object.entries(S.bag).filter(([k,n])=>n>0);
+  openModal(`<h2>バッグ</h2>${list.length?list.map(([k,n])=>`<div class="shopitem"><div><b>${ITEMS[k].n}</b> ×${n}<br><span class="sub">${ITEMS[k].d}</span></div>${ITEMS[k].scout?'':`<button onclick="bagUse('${k}')">使う</button>`}</div>`).join(''):'<p class="sub">何も持っていません</p>'}<button onclick="closeModal()">閉じる</button>`);
+}
+function bagUse(k){
+  openModal(`<h2>${ITEMS[k].n}を誰に使う?</h2>${S.party.map((f,i)=>fcard(f,`<button onclick="bagApply('${k}',${i})" ${canUse(k,f)?'':'disabled'}>使う</button>`)).join('')}<button onclick="openBag()">戻る</button>`);
+}
+function canUse(k,f){const it=ITEMS[k];if(it.revive)return f.hp<=0;if(it.heal)return f.hp>0&&f.hp<st(f,'hp');return false}
+function applyItem(k,f){const it=ITEMS[k],mx=st(f,'hp');S.bag[k]--;const b=f.hp;if(it.revive)f.hp=Math.floor(mx/2);else f.hp=Math.min(mx,f.hp+it.heal);return f.hp-b}
+function bagApply(k,i){const f=S.party[i];if(!canUse(k,f))return;const d=applyItem(k,f);toast(`${nm(f)}のHPが${d}回復した`);if((S.bag[k]||0)>0)bagUse(k);else openBag()}
+function openDex(){
+  const got=Object.keys(S.got).length,seen=Object.keys(S.seen).length;
+  openModal(`<h2>ヒロイン図鑑</h2><p class="sub">出会った ${seen} ・ 仲間にした ${got} / ${SPECIES.length}</p><div class="dex">${SPECIES.map((s,i)=>{
+    const g=S.got[i],sn=S.seen[i];
+    return `<div class="cell" title="${g?esc(s.d):''}">${portrait(i,64,!sn)}<div><b>${sn?s.n:'？？？'}</b></div>${sn?typeTag(s.t):''}<div class="sub">${g?s.ti:sn?'出会った':'未発見'}</div></div>`}).join('')}</div><button onclick="closeModal()" style="margin-top:10px">閉じる</button>`);
+}
+
+/* ================== 探索 (道路・ダンジョン) ================== */
+const MW=25,MH=17,TS=28;
+let X=null;
+function genFloor(a,fl){
+  const m=Array.from({length:MH},()=>Array(MW).fill(0));
+  let x=2,y=8,cnt=0;const target=Math.floor(MW*MH*0.44);
+  const carve=(x,y)=>{if(x<1||y<1||x>MW-2||y>MH-2)return;if(m[y][x]===0){m[y][x]=1;cnt++}};
+  carve(x,y);let guard=0;
+  while(cnt<target&&guard++<30000){
+    let d=pick([[1,0],[-1,0],[0,1],[0,-1]]);if(Math.random()<.12)d=[1,0];
+    x=Math.max(1,Math.min(MW-2,x+d[0]));y=Math.max(1,Math.min(MH-2,y+d[1]));carve(x,y);
+    if(Math.random()<.25){carve(x+1,y);carve(x,y+1)}
+  }
+  // BFS
+  const dist=Array.from({length:MH},()=>Array(MW).fill(-1));const q=[[2,8]];dist[8][2]=0;let far=[2,8];
+  while(q.length){const [cx,cy]=q.shift();if(dist[cy][cx]>dist[far[1]][far[0]])far=[cx,cy];
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=cx+dx,ny=cy+dy;if(m[ny]&&m[ny][nx]===1&&dist[ny][nx]<0){dist[ny][nx]=dist[cy][cx]+1;q.push([nx,ny])}}}
+  // 草むら
+  const blobs=a.kind==='route'?9:0;
+  for(let b=0;b<blobs;b++){const bx=R(2,MW-3),by=R(2,MH-3),r=R(2,3);
+    for(let yy=by-r;yy<=by+r;yy++)for(let xx=bx-r;xx<=bx+r;xx++)if(m[yy]&&m[yy][xx]===1&&Math.hypot(xx-bx,yy-by)<=r+.3)m[yy][xx]=2}
+  m[8][2]=1;
+  const ex={x:far[0],y:far[1]};m[ex.y][ex.x]=3;
+  const free=[];for(let yy=0;yy<MH;yy++)for(let xx=0;xx<MW;xx++)if((m[yy][xx]===1||m[yy][xx]===2)&&dist[yy][xx]>5)free.push([xx,yy]);
+  const used=new Set();const take=()=>{for(let k=0;k<50;k++){const p=pick(free);const key=p+'';if(p&&!used.has(key)){used.add(key);return p}}return null};
+  const trainers=[];const nT=a.trainers;
+  for(let t=0;t<nT;t++){const p=take();if(!p)break;const n=R(1,Math.min(3,1+fl+(a.kind==='dungeon'?1:0)));
+    const team=[];for(let k=0;k<n;k++)team.push([wpick(a.wild),R(a.lv[1]-2,a.lv[1])]);
+    trainers.push({x:p[0],y:p[1],name:pick(TRAINER_NAMES),team,done:false})}
+  const chests=[];const nC=R(1,2);for(let c=0;c<nC;c++){const p=take();if(p)chests.push({x:p[0],y:p[1],open:false})}
+  return {m,ex,trainers,chests,px:2,py:8};
+}
+function startExplore(a){
+  X={a,fl:0,busy:false,...genFloor(a,0)};
+  renderExplore();
+}
+function renderExplore(){
+  const a=X.a,last=X.fl===a.floors-1;
+  show(`<div class="row" style="justify-content:space-between;margin-bottom:6px"><h3 style="margin:0">${a.name}${a.floors>1?` ${X.fl+1}F / ${a.floors}F`:''}</h3>
+  <span class="sub">${a.kind==='route'?'草むらで野生のヒロインに出会える':'どこでも野生のヒロインが出る'} ・ ${last?(a.boss&&!F(a.id)?'★ボスが待つ':'出口'):'▼階段'}を目指せ</span></div>
+  <canvas id="cv" width="${MW*TS}" height="${MH*TS}"></canvas>
+  <div class="row" style="justify-content:space-between;margin-top:8px;align-items:flex-start">
+   <div class="dpad"><span></span><button onclick="step(0,-1)">▲</button><span></span><button onclick="step(-1,0)">◀</button><span></span><button onclick="step(1,0)">▶</button><span></span><button onclick="step(0,1)">▼</button><span></span></div>
+   <div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:180px">
+    <div class="panel" style="padding:8px;font-size:13px">${S.party.map(f=>`<div class="row" style="gap:6px"><span style="min-width:96px">${nm(f)} Lv${f.lv}</span><span style="flex:1">${hpBar(f)}</span></div>`).join('')}</div>
+    <button onclick="leaveArea()">エリアから脱出する</button>
+   </div></div>`,'explore');
+  drawMap();
+}
+function drawMap(){
+  const cv=$('cv');if(!cv||!X)return;const c=cv.getContext('2d'),th=THEME[X.a.theme],last=X.fl===X.a.floors-1;
+  for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){
+    const t=X.m[y][x],px=x*TS,py=y*TS;
+    c.fillStyle=t===0?th.wall:t===2?th.grass:th.floor;c.fillRect(px,py,TS,TS);
+    if(t===0){c.fillStyle='#0003';if(X.a.theme==='grass'||X.a.theme==='forest'){c.beginPath();c.arc(px+TS/2,py+TS/2,TS*.42,0,7);c.fillStyle='#0002';c.fill()}else c.fillRect(px+2,py+TS-6,TS-4,4)}
+    if(t===2){c.strokeStyle='#ffffff40';c.lineWidth=2;for(const o of[6,14,22]){c.beginPath();c.moveTo(px+o,py+TS-5);c.lineTo(px+o+3,py+10);c.stroke()}}
+    if(t===3){
+      if(last&&X.a.boss&&!F(X.a.id)){c.fillStyle='#c47ae0';c.beginPath();c.arc(px+TS/2,py+TS/2,TS*.45,0,7);c.fill();c.fillStyle='#fff';c.font=`bold ${TS*.6}px sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillText('★',px+TS/2,py+TS/2+1)}
+      else{c.fillStyle='#ffd24a';c.fillRect(px+3,py+3,TS-6,TS-6);c.fillStyle='#3a2a00';c.font=`bold ${TS*.55}px sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillText(last?'出':'▼',px+TS/2,py+TS/2+1)}
+    }
+  }
+  // 入口
+  c.strokeStyle='#ffffff80';c.lineWidth=2;c.strokeRect(2*TS+3,8*TS+3,TS-6,TS-6);
+  for(const ch of X.chests){if(ch.open)continue;const px=ch.x*TS,py=ch.y*TS;c.fillStyle='#8a5a2a';c.fillRect(px+5,py+8,TS-10,TS-13);c.fillStyle='#ffd24a';c.fillRect(px+5,py+13,TS-10,3);c.fillRect(px+TS/2-2,py+12,4,6)}
+  for(const t of X.trainers){if(t.done)continue;const px=t.x*TS+TS/2,py=t.y*TS+TS/2;c.fillStyle='#e0503a';c.beginPath();c.arc(px,py,TS*.38,0,7);c.fill();c.fillStyle='#fff';c.font=`bold ${TS*.5}px sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillText('!',px,py+1)}
+  const px=X.px*TS+TS/2,py=X.py*TS+TS/2;
+  c.fillStyle='#fff';c.beginPath();c.arc(px,py,TS*.42,0,7);c.fill();
+  c.fillStyle='#3a6ad8';c.beginPath();c.arc(px,py,TS*.34,0,7);c.fill();
+  c.fillStyle='#ffe2cc';c.beginPath();c.arc(px,py+2,TS*.2,0,7);c.fill();
+  c.fillStyle='#e03a3a';c.fillRect(px-TS*.3,py-TS*.32,TS*.6,TS*.16);
+}
+async function step(dx,dy){
+  if(!X||X.busy||SCREEN!=='explore'||modalOpen())return;
+  const nx=X.px+dx,ny=X.py+dy;if(nx<0||ny<0||nx>=MW||ny>=MH)return;
+  const t=X.m[ny][nx];if(t===0)return;
+  const tr=X.trainers.find(o=>!o.done&&o.x===nx&&o.y===ny);
+  X.busy=true;
+  try{
+    if(tr){await trainerBattle(tr);return}
+    const last=X.fl===X.a.floors-1;
+    if(t===3&&last&&X.a.boss&&!F(X.a.id)){await bossBattle();return}
+    X.px=nx;X.py=ny;drawMap();
+    const ch=X.chests.find(o=>!o.open&&o.x===nx&&o.y===ny);
+    if(ch){ch.open=true;await openChest();drawMap()}
+    if(t===3){if(last)await clearArea();else await nextFloor();return}
+    const rate=t===2?.13:(X.a.kind==='dungeon'?.07:0);
+    if(Math.random()<rate)await wildBattle();
+  }finally{if(X)X.busy=false}
+}
+async function openChest(){
+  const r=Math.random(),lvl=X.a.lv[1];let txt;
+  if(r<.35){const k=S.badges>=2?'superp':'potion';S.bag[k]=(S.bag[k]||0)+1;txt=`${ITEMS[k].n}を見つけた!`}
+  else if(r<.65){const k=S.badges>=2&&Math.random()<.4?'gcard':'card';const n=k==='card'?2:1;S.bag[k]=(S.bag[k]||0)+n;txt=`${ITEMS[k].n}を${n}枚見つけた!`}
+  else if(r<.8&&S.badges>=1){S.bag.revive=(S.bag.revive||0)+1;txt='気つけ薬を見つけた!'}
+  else{const g=lvl*30;S.money+=g;txt=`${g}Gを見つけた!`}
+  await talk(['宝箱を開けた!',txt]);
+}
+async function nextFloor(){
+  await talk([`階段を進んだ… (${X.fl+2}F)`]);
+  X={...X,fl:X.fl+1,...genFloor(X.a,X.fl+1)};renderExplore();
+}
+async function clearArea(){
+  const a=X.a,first=!F(a.id);S.flags[a.id]=true;
+  const next=AREAS[AREAS.indexOf(a)+1];
+  await talk([`${a.name}を${a.kind==='route'?'抜けた':'踏破した'}!`].concat(first&&next?[`新しい場所「${next.name}」に行けるようになった!`]:[]));
+  X=null;save(true);
+  if(next&&next.kind==='town')goTown(next.id);else worldMap();
+}
+async function leaveArea(){
+  if(X&&X.busy)return;
+  if(!await confirmBox('エリアから脱出してワールドマップに戻りますか?'))return;
+  X=null;worldMap();
+}
+document.addEventListener('keydown',e=>{
+  if(SCREEN!=='explore')return;
+  const k={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]}[e.key];
+  if(k){e.preventDefault();step(k[0],k[1])}
+});
+async function wildBattle(){
+  const s=wpick(X.a.wild),f=mk(s,R(X.a.lv[0],X.a.lv[1]));
+  const r=await battle({enemies:[f],wild:true,field:THEME[X.a.theme].field});
+  if(r==='lose')return blackout();
+  renderExplore();
+}
+async function trainerBattle(t){
+  await talk([{s:t.name,t:pick(['目が合ったらバトルだよ!','私のヒロインたちの強さ、見せてあげる!','ここを通りたければ勝負だ!','腕試しにちょうどいい相手だ!'])}]);
+  const r=await battle({enemies:t.team.map(([s,l])=>mk(s,l)),trainer:{name:t.name},field:THEME[X.a.theme].field});
+  if(r==='lose')return blackout();
+  t.done=true;renderExplore();
+}
+async function bossBattle(){
+  const [s,l]=X.a.boss,b=SPECIES[s];
+  await talk([`強大な気配を感じる…!`,{s:b.n,p:s,t:`わたしは${b.ti}、${b.n}。この先へ進みたいなら、その力を示しなさい!`}]);
+  const r=await battle({enemies:[mk(s,l,false)],wild:true,boss:true,field:THEME[X.a.theme].field});
+  if(r==='lose')return blackout();
+  if(r==='run'){renderExplore();return}
+  if(r!=='scout')await talk([{s:b.n,p:s,t:'…見事ね。あなたなら、この先へ進む資格があるわ。\n(またいつか会えたら、その時は仲間に…)'}]);
+  await clearArea();
+}
+async function blackout(){
+  const lost=Math.floor(S.money/2);S.money-=lost;healAll();X=null;
+  await talk([`${S.name}の手持ちのヒロインは全員戦えなくなった…`,`${lost}Gを落としてしまった…`,'目の前が真っ暗になった…']);
+  goTown(S.lastTown);
+}
+
+/* ================== ジム / リーグ ================== */
+function interstitial(title,foe,idx,total){
+  return new Promise(res=>{
+    show(`<div class="panel" style="text-align:center"><h2>${title}</h2><p class="sub">${idx+1} / ${total} 戦目</p><h3>次の相手: ${esc(foe.name)}</h3>
+    <p class="sub">手持ち ${foe.team.length}人</p><p class="sub">戦いの合間に回復できるのはバッグの道具だけ!</p>
+    <div class="row" style="justify-content:center"><button class="primary" id="ig">挑む!</button><button id="iq">撤退する</button></div></div>
+    <div class="panel" style="margin-top:10px">${S.party.map(f=>`<div class="row" style="margin-bottom:4px">${portrait(f.sp,40)}<span style="min-width:120px">${nm(f)} Lv${f.lv}</span><span style="flex:1">${hpBar(f)}</span><span class="sub">${f.hp}/${st(f,'hp')}</span></div>`).join('')}</div>`,'inter');
+    $('ig').onclick=()=>{if(!S.party.some(f=>f.hp>0)){toast('戦えるヒロインがいません');return}res(true)};$('iq').onclick=()=>res(false);
+  });
+}
+async function challengeGym(gi){
+  const g=GYMS[gi];
+  const foes=[...g.trainers,{name:'ジムリーダー '+g.leader,team:g.team,leader:true}];
+  for(let i=0;i<foes.length;i++){
+    const ok=await interstitial(g.name,foes[i],i,foes.length);
+    if(!ok)return goTown(S.lastTown);
+    if(foes[i].leader)await talk([{s:foes[i].name,t:g.intro}]);
+    const r=await battle({enemies:foes[i].team.map(([s,l])=>mk(s,l,false)),trainer:{name:foes[i].name,leader:true},field:'gym'});
+    if(r==='lose')return blackout();
+  }
+  S.badges=gi+1;S.money+=1000*(gi+1);
+  await talk([{s:'ジムリーダー '+g.leader,t:g.win},`${g.badge}を手に入れた! 賞金${1000*(gi+1)}Gも受け取った!`]);
+  save(true);goTown(S.lastTown);
+}
+function leagueScreen(){
+  show(`<div class="panel" style="text-align:center"><h2>セントラルリーグ</h2><p>四天王4人とチャンピオンに連続で勝利すれば殿堂入り!<br><span class="sub">途中で回復できるのはバッグの道具だけ。準備は万全に。</span></p>
+  <div class="row" style="justify-content:center"><button class="primary" onclick="challengeLeague()">挑戦する</button><button onclick="healAll();toast('リーグのセンターで回復した');leagueScreen()">回復する</button><button onclick="shop()">ショップ</button><button onclick="worldMap()">戻る</button></div></div>`,'league');
+}
+async function challengeLeague(){
+  for(let i=0;i<LEAGUE.length;i++){
+    const L=LEAGUE[i];
+    const ok=await interstitial('セントラルリーグ',L,i,LEAGUE.length);
+    if(!ok)return leagueScreen();
+    await talk([{s:L.name,t:L.intro}]);
+    const r=await battle({enemies:L.team.map(([s,l])=>mk(s,l,false)),trainer:{name:L.name,leader:true},field:'gym'});
+    if(r==='lose')return blackout();
+    await talk([{s:L.name,t:L.win}]);
+  }
+  const first=!S.champion;S.champion=true;S.money+=10000;
+  await talk(['セントラルリーグ制覇!',`${S.name}は新たなバトルチャンピオンになった!`].concat(first?['賞金10000Gを受け取った!']:[]));
+  save(true);hallOfFame();
+}
+function hallOfFame(){
+  show(`<div class="title"><h1>殿堂入り</h1><p>チャンピオン ${esc(S.name)} と共に戦ったヒロインたち</p>
+  <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin:16px 0">${S.party.map(f=>`<div class="panel">${portrait(f.sp,96)}<div><b>${nm(f)}</b> Lv${f.lv}</div><div class="sub">${sp(f).ti}</div></div>`).join('')}</div>
+  <p class="sub">図鑑 ${Object.keys(S.got).length} / ${SPECIES.length} 人。まだ見ぬヒロインを探して旅を続けよう!</p>
+  <button class="primary" onclick="worldMap()">旅を続ける</button></div>`,'hof');
+}
+
+/* ================== バトル ================== */
+let B=null;
+const bm=s=>s>=0?(2+s)/2:2/(2-s);
+const pf=()=>S.party[B.pi];
+const ef=()=>B.enemies[B.ei];
+function battle(opt){
+  return new Promise(res=>{
+    B={...opt,ei:0,pi:S.party.findIndex(f=>f.hp>0),pb:{atk:0,def:0},eb:{atk:0,def:0},busy:true,ended:false,res,mustSwitch:false};
+    S.seen[ef().sp]=true;
+    renderBattle();
+    (async()=>{
+      if(B.trainer)await msg(`${B.trainer.name}が勝負を仕掛けてきた!`);
+      if(B.trainer)await msg(`${B.trainer.name}は${nm(ef())}を繰り出した!`);
+      else if(B.boss)await msg(`${sp(ef()).ti}${nm(ef())}が立ちはだかった!`);
+      else await msg(`野生の${nm(ef())}(${sp(ef()).ti})が勝負を挑んできた!`);
+      await msg(`行け! ${nm(pf())}!`);
+      B.busy=false;mainCmd();
+    })();
+  });
+}
+function renderBattle(){
+  show(`<div class="battle"><div class="field ${B.field||''}">
+   <div class="combatant enemy"><div class="card" id="einfo"></div><div id="ept"></div></div>
+   <div class="combatant player"><div id="ppt"></div><div class="card" id="pinfo"></div></div></div>
+   <div class="log" id="blog" onclick="skipMsg()"></div><div class="cmd" id="bcmd"></div></div>`,'battle',false);
+  updB(true);
+}
+function updB(redraw){
+  const E=ef(),P=pf();
+  const dots=B.trainer?`<div class="dots">${B.enemies.map(f=>`<span class="${f.hp>0?'':'off'}"></span>`).join('')}</div>`:'';
+  $('einfo').innerHTML=`${dots}<b>${nm(E)}</b> ${typeTag(sp(E).t)} Lv${E.lv}${S.got[E.sp]?' <span title="仲間にしたことがある">◆</span>':''}${hpBar(E)}${buffTxt(B.eb)}`;
+  $('pinfo').innerHTML=`<b>${nm(P)}</b> ${typeTag(sp(P).t)} Lv${P.lv}${hpBar(P)}<div class="sub">HP ${P.hp}/${st(P,'hp')} ${buffTxt(B.pb)}</div>${expBar(P)}`;
+  if(redraw){$('ept').innerHTML=portrait(E.sp,B.boss?140:120);$('ppt').innerHTML=portrait(P.sp,120)}
+}
+function buffTxt(b){const t=[];if(b.atk)t.push(`攻${b.atk>0?'↑':'↓'}${Math.abs(b.atk)}`);if(b.def)t.push(`防${b.def>0?'↑':'↓'}${Math.abs(b.def)}`);return t.length?`<span class="sub">${t.join(' ')}</span>`:''}
+let skipFn=null;
+function skipMsg(){if(skipFn)skipFn()}
+function msg(t){
+  const l=$('blog');if(!l)return Promise.resolve();
+  const d=document.createElement('div');d.textContent=t;l.appendChild(d);l.scrollTop=l.scrollHeight;
+  return new Promise(r=>{const done=()=>{skipFn=null;r()};skipFn=done;setTimeout(done,S.fast?260:650)});
+}
+function setCmd(h){const c=$('bcmd');if(c)c.innerHTML=h}
+function mainCmd(){
+  if(B.ended)return;
+  setCmd(`<button onclick="moveCmd()">たたかう</button><button onclick="scoutCmd()" ${B.trainer?'disabled':''}>スカウト</button>
+  <button onclick="itemCmd()">どうぐ</button><button onclick="switchCmd(false)">こうたい</button>
+  <button onclick="doTurn({k:'run'})" ${B.trainer?'disabled':''}>にげる</button><button onclick="S.fast=!S.fast;mainCmd()">速度: ${S.fast?'はやい':'ふつう'}</button>`);
+}
+function moveCmd(){
+  const P=pf(),E=ef();
+  setCmd(P.moves.map(id=>{const m=MOVES[id];let note=m.k==='heal'?'HP回復':m.k==='buff'?'自分の'+(m.stat==='atk'?'攻撃':'防御')+'↑':m.k==='debuff'?'相手の防御↓':`威力${m.p} 命中${m.a}`;
+    if(!m.k){const e=eff(m.t,sp(E).t);if(e>1)note+=' ・ 効果ばつぐん';else if(e<1)note+=' ・ いまひとつ'}
+    return `<button class="mv" onclick="doTurn({k:'move',m:'${id}'})" style="border-color:${TC[m.t]}"><span>${m.n} ${typeTag(m.t)}</span><small>${note}</small></button>`}).join('')+`<button class="wide" onclick="mainCmd()">もどる</button>`);
+}
+function scoutCmd(){
+  const cards=['card','gcard'].filter(k=>(S.bag[k]||0)>0);
+  if(!cards.length){setCmd(`<div class="wide sub" style="padding:8px">スカウトカードを持っていない!</div><button class="wide" onclick="mainCmd()">もどる</button>`);return}
+  const E=ef(),r=E.hp/st(E,'hp');
+  setCmd(cards.map(k=>`<button onclick="doTurn({k:'scout',item:'${k}'})">${ITEMS[k].n} ×${S.bag[k]}</button>`).join('')+`<div class="wide sub">HPが減っているほど誘いに応じてくれやすい(現在HP ${Math.round(r*100)}%)</div><button class="wide" onclick="mainCmd()">もどる</button>`);
+}
+function itemCmd(){
+  const list=Object.entries(S.bag).filter(([k,n])=>n>0&&!ITEMS[k].scout);
+  setCmd(list.map(([k,n])=>`<button onclick="itemTarget('${k}')">${ITEMS[k].n} ×${n}</button>`).join('')+(list.length?'':'<div class="wide sub">使える道具がない</div>')+`<button class="wide" onclick="mainCmd()">もどる</button>`);
+}
+function itemTarget(k){
+  setCmd(S.party.map((f,i)=>`<button onclick="doTurn({k:'item',item:'${k}',i:${i}})" ${canUse(k,f)?'':'disabled'}>${nm(f)} ${f.hp}/${st(f,'hp')}</button>`).join('')+`<button class="wide" onclick="itemCmd()">もどる</button>`);
+}
+function switchCmd(forced){
+  setCmd(S.party.map((f,i)=>`<button onclick="${forced?`forcedSwitch(${i})`:`doTurn({k:'switch',i:${i}})`}" ${f.hp<=0||i===B.pi?'disabled':''}>${nm(f)} Lv${f.lv} ${f.hp}/${st(f,'hp')}</button>`).join('')+(forced?'<div class="wide sub">次に戦うヒロインを選んでください</div>':`<button class="wide" onclick="mainCmd()">もどる</button>`));
+}
+async function forcedSwitch(i){
+  if(B.busy)return;B.busy=true;setCmd('');
+  B.pi=i;B.pb={atk:0,def:0};B.mustSwitch=false;updB(true);await msg(`行け! ${nm(pf())}!`);
+  B.busy=false;mainCmd();
+}
+function aiMove(){
+  const E=ef(),P=pf(),mx=st(E,'hp');let best=null,bs=-1;
+  for(const id of E.moves){const m=MOVES[id];let s;
+    if(m.k==='heal')s=E.hp<mx*.4?140:0;
+    else if(m.k==='buff')s=B.eb[m.stat]<2?28:0;
+    else if(m.k==='debuff')s=B.pb.def>-2?22:0;
+    else s=m.p*eff(m.t,sp(P).t)*(m.t===sp(E).t?1.5:1)*(m.a/100);
+    s*=.75+Math.random()*.5;if(s>bs){bs=s;best=id}}
+  return best;
+}
+async function doTurn(act){
+  if(B.busy||B.ended)return;B.busy=true;setCmd('');
+  const eMove=aiMove();
+  if(act.k==='move'){
+    const pm=MOVES[act.m],em=MOVES[eMove];
+    const ps=st(pf(),'spd'),es=st(ef(),'spd');
+    const pFirst=(pm.pri||0)!==(em.pri||0)?(pm.pri||0)>(em.pri||0):ps!==es?ps>es:Math.random()<.5;
+    if(pFirst){await attack(true,act.m);if(!await afterHit())await (attack(false,eMove).then(afterHit))}
+    else{await attack(false,eMove);if(!await afterHit())await (attack(true,act.m).then(afterHit))}
+  }else{
+    if(act.k==='switch'){await msg(`戻れ、${nm(pf())}!`);B.pi=act.i;B.pb={atk:0,def:0};updB(true);await msg(`行け! ${nm(pf())}!`)}
+    if(act.k==='item'){const f=S.party[act.i];const it=ITEMS[act.item];const d=applyItem(act.item,f);await msg(`${it.n}を使った! ${nm(f)}のHPが${d}回復した!`);
+      updB(false)}
+    if(act.k==='scout'){if(await tryScout(act.item))return endBattle('scout')}
+    if(act.k==='run'){
+      const p=Math.min(.95,.5+.4*st(pf(),'spd')/Math.max(1,st(ef(),'spd'))-(B.boss?.3:0));
+      if(Math.random()<p){await msg('うまく逃げ切れた!');return endBattle('run')}
+      await msg('逃げられなかった!');
+    }
+    await attack(false,eMove);await afterHit();
+  }
+  if(!B||B.ended)return;
+  B.busy=false;
+  if(B.mustSwitch)switchCmd(true);else mainCmd();
+}
+async function attack(isP,id){
+  const A=isP?pf():ef(),D=isP?ef():pf(),ab=isP?B.pb:B.eb,db=isP?B.eb:B.pb,m=MOVES[id];
+  const an=(isP?'':'相手の')+nm(A),dn=(isP?'相手の':'')+nm(D);
+  await msg(`${an}の${m.n}!`);
+  if(m.k==='heal'){const mx=st(A,'hp');if(A.hp>=mx){await msg('しかし体力は満タンだ!');return}A.hp=Math.min(mx,A.hp+Math.floor(mx/2));updB(false);await msg(`${an}の体力が回復した!`);return}
+  if(m.k==='buff'){if(ab[m.stat]>=3){await msg('これ以上あがらない!');return}ab[m.stat]++;updB(false);await msg(`${an}の${m.stat==='atk'?'攻撃':'防御'}があがった!`);return}
+  if(m.k==='debuff'){if(db[m.stat]<=-3){await msg('これ以上さがらない!');return}db[m.stat]--;updB(false);await msg(`${dn}の防御がさがった!`);return}
+  if(Math.random()*100>=m.a){await msg('しかし攻撃は外れた!');return}
+  const e=eff(m.t,sp(D).t),crit=Math.random()<.0625;
+  const Av=st(A,'atk')*bm(ab.atk),Dv=st(D,'def')*bm(crit?Math.min(0,db.def):db.def);
+  const base=Math.floor((2*A.lv/5+2)*m.p*Av/Dv/50)+2;
+  const dmg=Math.max(1,Math.floor(base*(m.t===sp(A).t?1.5:1)*e*(crit?1.5:1)*(.85+Math.random()*.15)));
+  D.hp=Math.max(0,D.hp-dmg);
+  const el=$(isP?'ept':'ppt');const svg=el&&el.firstElementChild;if(svg){svg.classList.remove('hit');void svg.getBoundingClientRect();svg.classList.add('hit')}
+  updB(false);
+  if(crit)await msg('急所に当たった!');
+  if(e>1)await msg('効果はばつぐんだ!');else if(e<1)await msg('効果はいまひとつのようだ…');
+  if(m.drain&&A.hp>0){const h=Math.max(1,Math.floor(dmg/2));A.hp=Math.min(st(A,'hp'),A.hp+h);updB(false);await msg(`${an}は体力を吸い取った!`)}
+}
+// 戦闘不能チェック: ターンを打ち切るなら true
+async function afterHit(){
+  const E=ef(),P=pf();
+  if(E.hp<=0){
+    const svg=$('ept').firstElementChild;if(svg)svg.classList.add('faint');
+    await msg(`${B.trainer?'相手の':'野生の'}${nm(E)}は倒れた!`);
+    const gain=Math.floor(sp(E).x*E.lv/4*(B.trainer?1.5:1));
+    for(const f of S.party){if(f.hp<=0)continue;await giveExp(f,f===P?gain:Math.floor(gain/2),f===P)}
+    updB(false);
+    const ni=B.enemies.findIndex(f=>f.hp>0);
+    if(ni<0){
+      if(B.trainer){const prize=Math.max(...B.enemies.map(f=>f.lv))*(B.trainer.leader?60:25);S.money+=prize;await msg(`${B.trainer.name}との勝負に勝った!`);await msg(`賞金${prize}Gを手に入れた!`)}
+      await endBattle('win');return true;
+    }
+    B.ei=ni;B.eb={atk:0,def:0};S.seen[ef().sp]=true;
+    await msg(`${B.trainer.name}は${nm(ef())}を繰り出した!`);updB(true);
+    return true;
+  }
+  if(P.hp<=0){
+    const svg=$('ppt').firstElementChild;if(svg)svg.classList.add('faint');
+    await msg(`${nm(P)}は倒れた!`);
+    if(!S.party.some(f=>f.hp>0)){await endBattle('lose');return true}
+    B.mustSwitch=true;return true;
+  }
+  return false;
+}
+async function giveExp(f,g,active){
+  if(f.lv>=100)return;
+  f.exp+=g;if(active)await msg(`${nm(f)}は${g}の経験値を得た!`);
+  while(f.lv<100&&f.exp>=expFor(f.lv+1)){
+    const oldMax=st(f,'hp');f.lv++;if(f.hp>0)f.hp+=st(f,'hp')-oldMax;
+    await msg(`${nm(f)}はレベル${f.lv}にあがった!`);
+    for(const [l,id] of learnset(f.sp))if(l===f.lv&&!f.moves.includes(id))await learnMove(f,id);
+  }
+  if(f===pf())updB(false);
+}
+async function learnMove(f,id){
+  const m=MOVES[id];
+  if(f.moves.length<4){f.moves.push(id);await msg(`${nm(f)}は${m.n}を覚えた!`);return}
+  // 威力の低い攻撃技、または補助技(同種)を入れ替える
+  let worst=-1,wp=Infinity;
+  f.moves.forEach((x,i)=>{const mm=MOVES[x];const p=mm.k?(m.k===mm.k?0:999):mm.p;if(p<wp){wp=p;worst=i}});
+  if(m.k?wp===0:wp<m.p){const old=MOVES[f.moves[worst]].n;f.moves[worst]=id;await msg(`${nm(f)}は${old}を忘れて${m.n}を覚えた!`)}
+}
+async function tryScout(k){
+  const it=ITEMS[k],E=ef(),s=sp(E);S.bag[k]--;
+  await msg(`${S.name}は${it.n}を差し出した!`);
+  const r=E.hp/st(E,'hp');const p=Math.min(.95,s.c*(1-.8*r)*it.scout+.04);
+  await msg('……');await msg('…………');
+  if(Math.random()<p){
+    await msg(`${nm(E)}「${pick(['あなたの実力、認めるわ。一緒に行かせて!','ふふっ、面白い人。ついていってあげる!','あなたとなら、もっと強くなれそう!','…負けたわ。これからよろしくね!'])}」`);
+    await msg(`${nm(E)}が仲間になった!`);
+    E.uid=S.uid++;S.got[E.sp]=true;
+    if(S.party.length<6)S.party.push(E);else{S.box.push(E);await msg(`${nm(E)}はボックスで待っている。`)}
+    return true;
+  }
+  await msg(`${nm(E)}「${pick(['まだ認めないわ!','もっと本気を見せて!','その程度じゃ仲間にはなれないわね!','うーん、まだ考え中…!'])}」`);
+  return false;
+}
+async function endBattle(r){
+  B.ended=true;B.busy=true;setCmd('');
+  if(r!=='lose'){
+    for(const f of S.party){
+      const s=sp(f);
+      if(s.ev&&f.lv>=s.ev[1]&&f.hp>0){
+        const from=f.sp,to=s.ev[0],ratio=f.hp/st(f,'hp');
+        await talk([{p:from,t:`…おや? ${s.n}の様子が……!`}]);
+        f.sp=to;f.hp=Math.max(1,Math.round(st(f,'hp')*ratio));S.got[to]=S.seen[to]=true;
+        await talk([{p:to,s:SPECIES[to].n,t:`${s.n}は${SPECIES[to].ti}「${SPECIES[to].n}」に進化した!`}]);
+      }
+    }
+  }
+  const res=B.res;B=null;
+  save(true);res(r);
+}
+
+/* ================== 起動 ================== */
+titleScreen();
+</script>
+</body>
+</html>
